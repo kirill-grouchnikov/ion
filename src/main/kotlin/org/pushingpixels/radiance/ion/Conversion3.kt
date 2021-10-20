@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2005-2021 Radiance Kirill Grouchnikov. All Rights Reserved.
+ * Copyright (c) 2021 Ion Kirill Grouchnikov. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -27,15 +27,41 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.pushingpixels.demo.ion
+package org.pushingpixels.radiance.ion
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.swing.Swing
+import org.pushingpixels.radiance.animation.ktx.RadianceComponent
+import org.pushingpixels.radiance.animation.ktx.componentTimeline
+import org.pushingpixels.radiance.animation.api.Timeline
+import java.awt.Color
 import java.awt.Dimension
 import java.awt.FlowLayout
 import javax.swing.*
+
+class ProcessResult(val resultChannel: ReceiveChannel<Int>, val job: Job)
+
+fun processCancelable() : ProcessResult {
+    val channel = Channel<Int>()
+    val job = GlobalScope.launch {
+        for (x in 1..5) {
+            if (!isActive) {
+                // This async operation has been canceled
+                break
+            }
+            println("Sending $x " + SwingUtilities.isEventDispatchThread())
+            // This is happening off the main thread
+            channel.send(x)
+            // Emulating long-running background processing
+            delay(1000L)
+        }
+        // Close the channel as we're done processing
+        channel.close()
+    }
+    return ProcessResult(channel, job)
+}
 
 fun main() {
     GlobalScope.launch(Dispatchers.Swing) {
@@ -49,27 +75,30 @@ fun main() {
         frame.add(button)
         frame.add(status)
 
+        var currJob: Job? = null
+
         button.addActionListener {
-            class MyWorker : SwingWorker<Unit, Int>() {
-                override fun doInBackground() {
-                    for (i in 1..5) {
-                        publish(i)
-                        Thread.sleep(1000)
-                    }
-                }
+            GlobalScope.launch(Dispatchers.Swing) {
+                currJob?.cancel()
 
-                override fun process(chunks: MutableList<Int>?) {
-                    status.text = "Progress " + chunks?.joinToString()
-                }
+                val processResult = processCancelable()
+                currJob = processResult.job
 
-                override fun done() {
-                    status.text = "Done!"
+                // The next loop keeps on going as long as the channel is not closed
+                for (y in processResult.resultChannel) {
+                    println("Processing $y " + SwingUtilities.isEventDispatchThread())
+
+                    status.text = "Progress $y"
                 }
+                status.text = "Done!"
             }
-
-            val worker = MyWorker()
-            worker.execute()
         }
+
+        button.foreground = Color.blue
+        button.componentTimeline {
+            property(RadianceComponent.foreground from Color.blue to Color.red)
+            duration = 1000
+        }.playLoop(Timeline.RepeatBehavior.REVERSE)
 
         frame.size = Dimension(600, 400)
         frame.setLocationRelativeTo(null)

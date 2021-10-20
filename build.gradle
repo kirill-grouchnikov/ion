@@ -1,3 +1,15 @@
+buildscript {
+    ext {
+        gradle_version = '7.2'
+        kotlin_version = '1.5.31'
+        kotlinx_coroutines_version = '1.5.2'
+        radiance_version = '5.0-SNAPSHOT'
+    }
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${rootProject.ext.kotlin_version}"
+    }
+}
+
 plugins {
     id 'org.jetbrains.kotlin.jvm' version '1.5.31'
     id 'java'
@@ -8,17 +20,15 @@ version '1.0-SNAPSHOT'
 
 repositories {
     mavenCentral()
-    mavenCentral()
+    maven {
+        url 'https://oss.sonatype.org/content/repositories/snapshots'
+    }
 }
 
 dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib"
-    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.5.2"
-    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.2"
-    implementation 'org.pushing-pixels:radiance-trident:4.5.0'
-    implementation 'org.pushing-pixels:radiance-torch:4.5.0'
-}
-
-test {
-    useJUnitPlatform()
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:${rootProject.ext.kotlin_version}"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-swing:${rootProject.ext.kotlinx_coroutines_version}"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:${rootProject.ext.kotlinx_coroutines_version}"
+    implementation "org.pushing-pixels:radiance-animation:${rootProject.ext.radiance_version}"
+    implementation "org.pushing-pixels:radiance-animation-ktx:${rootProject.ext.radiance_version}"
 }

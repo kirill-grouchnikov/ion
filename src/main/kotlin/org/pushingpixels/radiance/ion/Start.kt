@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2005-2021 Radiance Kirill Grouchnikov. All Rights Reserved.
+ * Copyright (c) 2021 Ion Kirill Grouchnikov. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -27,31 +27,15 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.pushingpixels.demo.ion
+package org.pushingpixels.radiance.ion
 
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.swing.Swing
-import org.pushingpixels.torch.TorchComponent
-import org.pushingpixels.torch.componentTimeline
-import org.pushingpixels.trident.api.Timeline
-import java.awt.Color
 import java.awt.Dimension
 import java.awt.FlowLayout
 import javax.swing.*
-
-suspend fun processAlternative(job : Job, progress: (Int) -> Unit = {}) {
-    for (x in 1..5) {
-        // Emulating long-running background processing.
-        // Use the parent job so that cancellation of the parent propagates in here.
-        GlobalScope.async(context=job) {
-            println("Running on " + SwingUtilities.isEventDispatchThread())
-            delay(1000L)
-        }.await()
-        // And calling the callback on the UI thread
-        println("Sending $x " + SwingUtilities.isEventDispatchThread())
-        progress(x)
-    }
-}
 
 fun main() {
     GlobalScope.launch(Dispatchers.Swing) {
@@ -65,27 +49,27 @@ fun main() {
         frame.add(button)
         frame.add(status)
 
-        var currJob: Job? = null
-
         button.addActionListener {
-            currJob?.cancel()
-
-            currJob = GlobalScope.launch(Dispatchers.Swing) {
-                // This will run until all the sequential async blocks are done
-                processAlternative(currJob!!) { progress ->
-                    println("Processing $progress " + SwingUtilities.isEventDispatchThread())
-
-                    status.text = "Progress $progress"
+            class MyWorker : SwingWorker<Unit, Int>() {
+                override fun doInBackground() {
+                    for (i in 1..5) {
+                        publish(i)
+                        Thread.sleep(1000)
+                    }
                 }
-                status.text = "Done!"
-            }
-        }
 
-        button.foreground = Color.blue
-        button.componentTimeline {
-            property(TorchComponent.foreground from Color.blue to Color.red)
-            duration = 1000
-        }.playLoop(Timeline.RepeatBehavior.REVERSE)
+                override fun process(chunks: MutableList<Int>?) {
+                    status.text = "Progress " + chunks?.joinToString()
+                }
+
+                override fun done() {
+                    status.text = "Done!"
+                }
+            }
+
+            val worker = MyWorker()
+            worker.execute()
+        }
 
         frame.size = Dimension(600, 400)
         frame.setLocationRelativeTo(null)

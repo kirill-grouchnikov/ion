@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2005-2021 Radiance Kirill Grouchnikov. All Rights Reserved.
+ * Copyright (c) 2021 Ion Kirill Grouchnikov. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -27,30 +27,27 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.pushingpixels.demo.ion
+package org.pushingpixels.radiance.ion
 
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.swing.Swing
-import org.pushingpixels.torch.TorchComponent
-import org.pushingpixels.torch.componentTimeline
-import org.pushingpixels.trident.api.Timeline
+import org.pushingpixels.radiance.animation.ktx.RadianceComponent
+import org.pushingpixels.radiance.animation.ktx.componentTimeline
+import org.pushingpixels.radiance.animation.api.Timeline
 import java.awt.Color
 import java.awt.Dimension
 import java.awt.FlowLayout
 import javax.swing.*
 
-class ProcessResult(val resultChannel: ReceiveChannel<Int>, val job: Job)
-
-fun processCancelable() : ProcessResult {
+fun process() : ReceiveChannel<Int> {
     val channel = Channel<Int>()
-    val job = GlobalScope.launch {
+    GlobalScope.launch {
         for (x in 1..5) {
-            if (!isActive) {
-                // This async operation has been canceled
-                break
-            }
             println("Sending $x " + SwingUtilities.isEventDispatchThread())
             // This is happening off the main thread
             channel.send(x)
@@ -60,7 +57,7 @@ fun processCancelable() : ProcessResult {
         // Close the channel as we're done processing
         channel.close()
     }
-    return ProcessResult(channel, job)
+    return channel
 }
 
 fun main() {
@@ -75,17 +72,10 @@ fun main() {
         frame.add(button)
         frame.add(status)
 
-        var currJob: Job? = null
-
         button.addActionListener {
             GlobalScope.launch(Dispatchers.Swing) {
-                currJob?.cancel()
-
-                val processResult = processCancelable()
-                currJob = processResult.job
-
                 // The next loop keeps on going as long as the channel is not closed
-                for (y in processResult.resultChannel) {
+                for (y in process()) {
                     println("Processing $y " + SwingUtilities.isEventDispatchThread())
 
                     status.text = "Progress $y"
@@ -96,7 +86,7 @@ fun main() {
 
         button.foreground = Color.blue
         button.componentTimeline {
-            property(TorchComponent.foreground from Color.blue to Color.red)
+            property(RadianceComponent.foreground from Color.blue to Color.red)
             duration = 1000
         }.playLoop(Timeline.RepeatBehavior.REVERSE)
 
