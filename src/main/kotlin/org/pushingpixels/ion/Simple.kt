@@ -27,14 +27,17 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.pushingpixels.radiance.ion
+package org.pushingpixels.ion
 
 import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.swing.Swing
 import java.awt.Dimension
 import java.awt.FlowLayout
 import javax.swing.*
+
+suspend fun <T> offSwingThread(block: suspend CoroutineScope.() -> T): T {
+    return withContext(Dispatchers.Default, block)
+}
 
 fun main() {
     GlobalScope.launch(Dispatchers.Swing) {
@@ -50,25 +53,10 @@ fun main() {
 
         button.addActionListener {
             GlobalScope.launch(Dispatchers.Swing) {
-                val channel = Channel<Int>()
-                GlobalScope.launch {
-                    for (x in 1..5) {
-                        println("Sending $x " + SwingUtilities.isEventDispatchThread())
-                        // This is happening off the main thread
-                        channel.send(x)
-                        // Emulating long-running background processing
-                        delay(1000L)
-                    }
-                    // Close the channel as we're done processing
-                    channel.close()
+                status.text = offSwingThread {
+                    Thread.sleep(2000)
+                    "Done!"
                 }
-                // The next loop keeps on going as long as the channel is not closed
-                for (y in channel) {
-                    println("Processing $y " + SwingUtilities.isEventDispatchThread())
-
-                    status.text = "Progress $y"
-                }
-                status.text = "Done!"
             }
         }
 

@@ -27,14 +27,9 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.pushingpixels.radiance.ion
+package org.pushingpixels.ion
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.ReceiveChannel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import kotlinx.coroutines.swing.Swing
 import org.pushingpixels.radiance.animation.ktx.RadianceComponent
 import org.pushingpixels.radiance.animation.ktx.componentTimeline
@@ -44,20 +39,18 @@ import java.awt.Dimension
 import java.awt.FlowLayout
 import javax.swing.*
 
-fun process() : ReceiveChannel<Int> {
-    val channel = Channel<Int>()
-    GlobalScope.launch {
-        for (x in 1..5) {
-            println("Sending $x " + SwingUtilities.isEventDispatchThread())
-            // This is happening off the main thread
-            channel.send(x)
-            // Emulating long-running background processing
+suspend fun processAlternative(job : Job, progress: (Int) -> Unit = {}) {
+    for (x in 1..5) {
+        // Emulating long-running background processing.
+        // Use the parent job so that cancellation of the parent propagates in here.
+        GlobalScope.async(context=job) {
+            println("Running on " + SwingUtilities.isEventDispatchThread())
             delay(1000L)
-        }
-        // Close the channel as we're done processing
-        channel.close()
+        }.await()
+        // And calling the callback on the UI thread
+        println("Sending $x " + SwingUtilities.isEventDispatchThread())
+        progress(x)
     }
-    return channel
 }
 
 fun main() {
@@ -72,13 +65,17 @@ fun main() {
         frame.add(button)
         frame.add(status)
 
-        button.addActionListener {
-            GlobalScope.launch(Dispatchers.Swing) {
-                // The next loop keeps on going as long as the channel is not closed
-                for (y in process()) {
-                    println("Processing $y " + SwingUtilities.isEventDispatchThread())
+        var currJob: Job? = null
 
-                    status.text = "Progress $y"
+        button.addActionListener {
+            currJob?.cancel()
+
+            currJob = GlobalScope.launch(Dispatchers.Swing) {
+                // This will run until all the sequential async blocks are done
+                processAlternative(currJob!!) { progress ->
+                    println("Processing $progress " + SwingUtilities.isEventDispatchThread())
+
+                    status.text = "Progress $progress"
                 }
                 status.text = "Done!"
             }

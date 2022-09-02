@@ -27,7 +27,7 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.pushingpixels.radiance.ion
+package org.pushingpixels.ion
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
