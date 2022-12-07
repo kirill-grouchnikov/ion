@@ -23,6 +23,6 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib:1.7.20")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.6.4")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
-    implementation("org.pushing-pixels:radiance-animation:6.0.1")
-    implementation("org.pushing-pixels:radiance-animation-ktx:6.0.1")
+    implementation("org.pushing-pixels:radiance-animation:6.5.0")
+    implementation("org.pushing-pixels:radiance-animation-ktx:6.5.0")
 }
