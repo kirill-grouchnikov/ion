@@ -22,6 +22,6 @@ repositories {
 dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.11.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
-    implementation("org.pushing-pixels:radiance-animation:8.5.0")
-    implementation("org.pushing-pixels:radiance-animation-ktx:8.5.0")
+    implementation("org.pushing-pixels:radiance-animation:9.0.0")
+    implementation("org.pushing-pixels:radiance-animation-ktx:9.0.0")
 }
